@@ -12,12 +12,26 @@ from api.routes import api
 from api.admin import setup_admin
 from api.commands import setup_commands
 
+import cloudinary
+import cloudinary.uploader
+
 #from models import Person
 
 ENV = os.getenv("FLASK_ENV")
 static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../public/')
 app = Flask(__name__)
 app.url_map.strict_slashes = False
+
+app.config['CLOUD_NAME']=os.getenv('CLOUD_NAME')
+app.config['CLOUD_KEY']=os.getenv('CLOUD_KEY')
+app.config['CLOUD_API_SECRET']=os.getenv('CLOUD_API_SECRET')
+
+cloudinary.config( 
+  cloud_name = app.config['CLOUD_NAME'], 
+  api_key = app.config['CLOUD_KEY'], 
+  api_secret = app.config['CLOUD_API_SECRET'],
+  secure = True
+)
 
 # database condiguration
 db_url = os.getenv("DATABASE_URL")
@@ -48,11 +62,11 @@ def handle_invalid_usage(error):
     return jsonify(error.to_dict()), error.status_code
 
 # generate sitemap with all your endpoints
-@app.route('/')
-def sitemap():
-    if ENV == "development":
-        return generate_sitemap(app)
-    return send_from_directory(static_file_dir, 'index.html')
+@app.route("/img",methods=['POST'])
+def upload_image():
+    img=request.files["img"]
+    img_url=cloudinary.uploader.upload(img)
+    return jsonify({"img_url": img_url['url']}),200
 
 # any other endpoint will try to serve it like a static file
 @app.route('/<path:path>', methods=['GET'])
